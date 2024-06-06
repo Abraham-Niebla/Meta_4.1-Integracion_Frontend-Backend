@@ -51,7 +51,6 @@
                         v-model="editedItem.etiqueta"
                         :items="etiquetasList"
                         item-title="etiquetaName"
-                        item-value="id"
                         label="Activo"
                         multiple
                         clearable
@@ -349,6 +348,7 @@ const getData = async () => {
       }));
 
       activos.value.forEach(async (activo) => {
+        activo.etiqueta = [];
         let url = urlTiposDeActivos + "/activo/" + activo.id;
         let tiposID = [];
 
@@ -366,6 +366,7 @@ const getData = async () => {
             (etiqueta) => etiqueta.id === tipo
           );
           if (etiqueta) {
+            activo.etiqueta.push(etiqueta.etiquetaName);
             if (index === 0) {
               cad = etiqueta.etiquetaName;
             } else {
@@ -376,6 +377,7 @@ const getData = async () => {
         activo.etiquetaSTR = cad;
         activo.etiquetaID = tiposID;
       });
+
       filteredactivos.value = activos.value;
 
       console.log("Activos otenidos!");
@@ -457,8 +459,16 @@ const saveElement = async () => {
       editedItem.value.ubicacion = ubicacionesList[json.ubicacionID].desc;
 
       let auxActivo = editedItem.value.id;
-      let auxTag = editedItem.value.etiqueta;
+      // let auxTag = editedItem.value.etiqueta;
+      let auxTag = [];
 
+      for (const tagName of editedItem.value.etiqueta) {
+      const tagNo = await etiquetasList.value.find(
+          (etiqueta) => etiqueta.etiquetaName === tagName
+        );
+      auxTag.push(tagNo.id);
+      }
+      
       url = `${urlTiposDeActivos}/activo/${editedIndex.value + 1}`;
       await fetch(url, { // Se eliminan todas las etiquetas del activo
         method: "DELETE",
@@ -466,19 +476,16 @@ const saveElement = async () => {
           "Content-type": "application/json; charset=UTF-8",
         },
       });
-
+      
       // Para todas las etiquetas seleccionadas
       editedItem.value.etiquetaID = [];
       editedItem.value.etiqueta = [];
-
-      for (const tagNo of auxTag) {
-        console.log("Activo: " + editedItem.value.id + " | Etiqueta: " + tagNo);
-        console.log(urlTiposDeActivos);
-
+      
+      for (const tagNo of auxTag) {        
         response = await fetch(urlTiposDeActivos, { // Se agregan las nuevas relaciones del activo con todas las etiquetas
           method: "POST",
           body: JSON.stringify({
-            activo: auxActivo,
+            activo: editedItem.value.id,
             etiqueta: tagNo,
           }),
           headers: {
@@ -490,22 +497,17 @@ const saveElement = async () => {
         editedItem.value.id = json.activo;
         editedItem.value.etiquetaID.push(json.etiqueta);
         editedItem.value.etiqueta.push(etiquetasList.value[json.etiqueta - 1].etiquetaName);
-
-        console.log("editedItem.value.etiquetaID = " + JSON.stringify(editedItem.value.etiquetaID));
-        console.log("editedItem.value.etiqueta = " + JSON.stringify(editedItem.value.etiqueta));
       }
-      console.log("END editedItem.value.etiquetaID = " + JSON.stringify(editedItem.value.etiquetaID));
-      console.log("END editedItem.value.etiqueta = " + JSON.stringify(editedItem.value.etiqueta));
       
       // Convertir array de etiquetas a cadena separada por comas y espacios
       editedItem.value.etiquetaSTR = editedItem.value.etiqueta.join(", ");
-      
-      console.log("END editedItem.value.etiqueta = " + JSON.stringify(editedItem.value.etiquetaSTR));
       Object.assign(filteredactivos.value[editedIndex.value], editedItem.value);
+      
       close();
-
-    } catch (error) {
+    }
+    catch (error) {
       console.error("Error saving edited element:", error);
+      close();
     }
   } 
   // Guarda un elemento nuevo

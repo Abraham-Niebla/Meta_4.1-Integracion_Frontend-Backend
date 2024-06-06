@@ -79,7 +79,7 @@
                         v-model="editedItem.ubicacion"
                         label="Ubicación"
                         :items="ubicacionesList"
-                        item-title="desc"
+                        item-title="ubicacion"
                         chips
                       />
                     </v-col>
@@ -346,7 +346,7 @@ const getData = async () => {
         responsableID: activo.responsableID,
         responsable: responsablesList.value[activo.responsableID-1].nombre,
         ubicacionID: activo.ubicacionID,
-        ubicacion: ubicacionesList.value[activo.ubicacionID-1].desc,
+        ubicacion: ubicacionesList.value[activo.ubicacionID-1].ubicacion,
       }));
 
       activos.value.forEach(async (activo) => {
@@ -461,7 +461,7 @@ const saveElement = async () => {
       
       //Obteniendo ID de ubicación
       const ubiID = await ubicacionesList.value.find(
-          (ubicacion) => ubicacion.desc === editedItem.value.ubicacion
+          (ubicacion) => ubicacion.ubicacion === editedItem.value.ubicacion
         ).id;
 
       let response = await fetch(url, {
@@ -487,7 +487,7 @@ const saveElement = async () => {
       editedItem.value.responsableID = json.responsableID;
       editedItem.value.responsable = responsablesList.value[json.responsableID-1].nombre;
       editedItem.value.ubicacionID = json.ubicacionID;
-      editedItem.value.ubicacion = ubicacionesList.value[json.ubicacionID-1].desc;
+      editedItem.value.ubicacion = ubicacionesList.value[json.ubicacionID-1].ubicacion;
 
       //Cambiando relación de etiquetas del activo
       let auxTag = [];
@@ -554,7 +554,7 @@ const saveElement = async () => {
       
       //Obteniendo ID de ubicación
       const ubiID = await ubicacionesList.value.find(
-          (ubicacion) => ubicacion.desc === editedItem.value.ubicacion
+          (ubicacion) => ubicacion.ubicacion === editedItem.value.ubicacion
         ).id;
 
       let response = await fetch(urlActivos, {
@@ -581,7 +581,7 @@ const saveElement = async () => {
       editedItem.value.responsableID = json.responsableID;
       editedItem.value.responsable = responsablesList.value[json.responsableID-1].nombre;
       editedItem.value.ubicacionID = json.ubicacionID;
-      editedItem.value.ubicacion = ubicacionesList.value[json.ubicacionID-1].desc;
+      editedItem.value.ubicacion = ubicacionesList.value[json.ubicacionID-1].ubicacion;
 
       //Cambiando relación de etiquetas del activo
       let auxTag = [];
@@ -640,8 +640,8 @@ getData();
 }
 
 .editElement-Card {
-  min-width: 90vw;
-  min-height: 65vh;
+  min-width: 90vw; /*Ancho minimo (Horizontal)*/
+  min-height: 65vh; /*Alto minimo (Vertical)*/
   transition: width 0.3s ease, height 0.3s ease;
 }
 </style>

@@ -8,11 +8,11 @@
     <!--Barra superior-->
     <template v-slot:top>
       <!--Dentro de la barra superior-->
-      <v-toolbar flat color="light-blue-lighten-5" >
-        <v-toolbar-title class="text-light-blue-darken-4">
+      <v-toolbar flat color="red-lighten-5">
+        <v-toolbar-title class="text-red-darken-4">
           <h4> 
-            <v-icon> mdi-archive </v-icon>
-            Control de Activos
+            <v-icon> mdi-map-marker </v-icon>
+            Control de Ubicaciones
           </h4>
         </v-toolbar-title>
 
@@ -205,8 +205,8 @@
 
     <!--Sin datos en la tabla-->
     <template v-slot:no-data>
-      <h3><b style="color: #01579B9c">¡Sin datos!</b></h3>
-      <h3><b style="color: #01579B9c">¡Añada elementos a la tabla!</b></h3>
+      <h3><b style="color: #B71C1C9c">¡Sin datos!</b></h3>
+      <h3><b style="color: #B71C1C9c">¡Añada elementos a la tabla!</b></h3>
     </template>
   </v-data-table>
 </template>

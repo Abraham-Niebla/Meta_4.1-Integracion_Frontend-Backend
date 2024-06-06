@@ -1,5 +1,5 @@
 <template>
-    <TablaActivos />
+    <TablaResponsables />
   </template>
   
   <script setup>

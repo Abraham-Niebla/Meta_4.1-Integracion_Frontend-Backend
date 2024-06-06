@@ -1,5 +1,5 @@
 <template>
-    <TablaActivos />
+    <TablaUbicaciones />
   </template>
   
   <script setup>

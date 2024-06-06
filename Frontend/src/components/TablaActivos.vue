@@ -1,7 +1,7 @@
 <template>
   <v-data-table
     :headers="headers"
-    :items="filteredactivos"
+    :items="activos"
     class="elevation-1"
     height="530px"
   >
@@ -49,18 +49,21 @@
                     <v-col cols="12" sm="6" md="4" class="text-indigo-darken-4">
                       <v-select
                         v-model="editedItem.etiqueta"
+                        label="Activo"
                         :items="etiquetasList"
                         item-title="etiquetaName"
-                        label="Activo"
                         multiple
                         clearable
                         chips
                       />
                     </v-col>
                     <v-col cols="12" sm="6" md="4" class="text-blue-darken-4">
-                      <v-text-field
+                      <v-select
                         v-model="editedItem.responsable"
                         label="Responsable"
+                        :items="responsablesList"
+                        item-title="nombre"
+                        chips
                       />
                     </v-col>
                     <v-col
@@ -69,9 +72,12 @@
                       md="4"
                       class="text-light-blue-darken-4"
                     >
-                      <v-text-field
+                      <v-select
                         v-model="editedItem.ubicacion"
                         label="Ubicación"
+                        :items="ubicacionesList"
+                        item-title="desc"
+                        chips
                       />
                     </v-col>
                   </v-row>
@@ -261,20 +267,13 @@ const defaultActivo = {
 
 const dialog = ref(false);
 const dialogDeleteItem = ref(false);
-const dialogSearch = ref(false); // Cuadro de dialogo para busqueda
-const searchQuery = ref("");
-const activos = ref([]);
-const filteredactivos = ref([]);
-let editedIndex = ref(-1);
+const editedIndex = ref(-1);
 const editedItem = ref({ ...defaultActivo }); //Copia del modelo de item
 
-let column = null;
-let inline = ref("radioTodos");
-
-const responsablesList = [];
-const ubicacionesList = [];
+const activos = ref([]);
+const responsablesList = ref([]);
+const ubicacionesList = ref([]);
 const etiquetasList = ref([]);
-const tiposDeActivosList = [];
 
 const urlActivos = "https://localhost:4000/activo";
 const urlResponsables = "https://localhost:4000/responsable";
@@ -296,7 +295,7 @@ const getData = async () => {
     .then((data) => {
       // Crear un mapeo de userId a nombres de autores
       data.forEach((responsable) => {
-        responsablesList[responsable.id] = responsable;
+        responsablesList.value[responsable.id-1] = responsable;
       });
 
       console.log("Responsables otenidos!");
@@ -309,7 +308,7 @@ const getData = async () => {
     .then((data) => {
       // Crear un mapeo de userId a nombres de autores
       data.forEach((ubicacion) => {
-        ubicacionesList[ubicacion.id] = ubicacion;
+        ubicacionesList.value[ubicacion.id-1] = ubicacion;
       });
 
       console.log("Ubicaciones otenidos!");
@@ -342,9 +341,9 @@ const getData = async () => {
         etiqueta: 0,
         desc: activo.desc,
         responsableID: activo.responsableID,
-        responsable: responsablesList[activo.responsableID].nombre,
+        responsable: responsablesList.value[activo.responsableID-1].nombre,
         ubicacionID: activo.ubicacionID,
-        ubicacion: ubicacionesList[activo.ubicacionID].desc,
+        ubicacion: ubicacionesList.value[activo.ubicacionID-1].desc,
       }));
 
       activos.value.forEach(async (activo) => {
@@ -378,37 +377,55 @@ const getData = async () => {
         activo.etiquetaID = tiposID;
       });
 
-      filteredactivos.value = activos.value;
-
       console.log("Activos otenidos!");
     });
 
-  // console.log("Datos Obtenidos:", filteredactivos.value);
   console.log("Datos Obtenidos!!");
 };
 
 //Abre cuadro de dialogo para añadir/editar elemento
-const editItem = (item) => {
-  editedIndex.value = filteredactivos.value.indexOf(item);
+const editItem = async (item) => {
+  editedIndex.value = activos.value.indexOf(item);
   editedItem.value = { ...item };
   dialog.value = true;
 };
 
 //Abre cuadro de diálogo para borrar elemento
-const deleteItem = (item) => {
-  editedIndex.value = filteredactivos.value.indexOf(item);
+const deleteItem = async (item) => {
+  editedIndex.value = activos.value.indexOf(item);
   editedItem.value = { ...item };
   dialogDeleteItem.value = true;
 };
 
 //Elimina el elemento seleccionado
-const deleteItemConfirm = () => {
-  const url = urlActivos + "/id/" + (editedIndex.value + 1);
-  fetch(url, {
-    method: "DELETE",
-  });
-  filteredactivos.value.splice(editedIndex.value, 1);
-  closeDeleteItem();
+const deleteItemConfirm = async () => {
+  try {
+    //Eliminar todas las etiquetas del activo
+    let url = `${urlTiposDeActivos}/activo/${editedItem.value.id}`;
+      await fetch(url, { // Se eliminan todas las etiquetas del activo
+        method: "DELETE",
+        headers: {
+          "Content-type": "application/json; charset=UTF-8",
+      },
+    });
+
+    //Eliminar el activo de la persistencia
+    url = await urlActivos + "/id/" + (editedItem.value.id);
+    await fetch(url, {
+      method: "DELETE",
+      headers: {
+        "Content-type": "application/json; charset=UTF-8",
+      },
+    });
+
+    //Eliminar el activo de la tabla
+    await activos.value.splice(editedIndex.value, 1);
+
+    closeDeleteItem();
+  }
+  catch (error) {
+    console.error("Error al eliminar: " + error);
+  }
 };
 
 //Cierra el cuadro de diálogo de añadir/editar elemento
@@ -428,10 +445,21 @@ const closeDeleteItem = () => {
 //Guarda un elemento editado o nuevo
 const saveElement = async () => {
   // Guarda un elemento editado
-  if (editedIndex.value > -1) {
+  if (typeof(editedItem.value.id) === "number") {
     try {
-      let url = `${urlActivos}/id/${editedIndex.value + 1}`;
-      console.log(url);
+      //Guardar cambios en el activo
+      let url = `${urlActivos}/id/${editedItem.value.id}`;
+
+      //Cambiando responsable y ubicación
+      //Obteniendo ID de responsable
+      const respID = await responsablesList.value.find(
+        (responsable) => responsable.nombre === editedItem.value.responsable
+      ).id;
+      
+      //Obteniendo ID de ubicación
+      const ubiID = await ubicacionesList.value.find(
+          (ubicacion) => ubicacion.desc === editedItem.value.ubicacion
+        ).id;
 
       let response = await fetch(url, {
         method: "PUT",
@@ -440,8 +468,8 @@ const saveElement = async () => {
           noSerie: editedItem.value.noSerie,
           noInv: editedItem.value.noInv,
           desc: editedItem.value.desc,
-          responsable: editedItem.value.responsableID,
-          ubicacion: editedItem.value.ubicacionID,
+          responsableID: respID,
+          ubicacionID: ubiID,
         }),
         headers: {
           "Content-type": "application/json; charset=UTF-8",
@@ -454,12 +482,11 @@ const saveElement = async () => {
       editedItem.value.noInv = json.noInv;
       editedItem.value.desc = json.desc;
       editedItem.value.responsableID = json.responsableID;
-      editedItem.value.responsable = responsablesList[json.responsableID].nombre;
+      editedItem.value.responsable = responsablesList.value[json.responsableID-1].nombre;
       editedItem.value.ubicacionID = json.ubicacionID;
-      editedItem.value.ubicacion = ubicacionesList[json.ubicacionID].desc;
+      editedItem.value.ubicacion = ubicacionesList.value[json.ubicacionID-1].desc;
 
-      let auxActivo = editedItem.value.id;
-      // let auxTag = editedItem.value.etiqueta;
+      //Cambiando relación de etiquetas del activo
       let auxTag = [];
 
       for (const tagName of editedItem.value.etiqueta) {
@@ -469,7 +496,7 @@ const saveElement = async () => {
       auxTag.push(tagNo.id);
       }
       
-      url = `${urlTiposDeActivos}/activo/${editedIndex.value + 1}`;
+      url = `${urlTiposDeActivos}/activo/${editedItem.value.id}`;
       await fetch(url, { // Se eliminan todas las etiquetas del activo
         method: "DELETE",
         headers: {
@@ -501,18 +528,32 @@ const saveElement = async () => {
       
       // Convertir array de etiquetas a cadena separada por comas y espacios
       editedItem.value.etiquetaSTR = editedItem.value.etiqueta.join(", ");
-      Object.assign(filteredactivos.value[editedIndex.value], editedItem.value);
-      
+
+      Object.assign(activos.value[editedIndex.value], editedItem.value);
       close();
     }
     catch (error) {
       console.error("Error saving edited element:", error);
       close();
     }
-  } 
+  }
+
   // Guarda un elemento nuevo
   else {
     try {
+      //Guardar Nuevo elemento activo
+
+      //Cambiando responsable y ubicación
+      //Obteniendo ID de responsable
+      const respID = await responsablesList.value.find(
+        (responsable) => responsable.nombre === editedItem.value.responsable
+      ).id;
+      
+      //Obteniendo ID de ubicación
+      const ubiID = await ubicacionesList.value.find(
+          (ubicacion) => ubicacion.desc === editedItem.value.ubicacion
+        ).id;
+
       let response = await fetch(urlActivos, {
         method: "POST",
         body: JSON.stringify({
@@ -520,8 +561,9 @@ const saveElement = async () => {
           noSerie: editedItem.value.noSerie,
           noInv: editedItem.value.noInv,
           desc: editedItem.value.desc,
-          responsable: editedItem.value.responsable,
-          ubicacion: editedItem.value.ubicacion,
+          imagen: "",
+          responsableID: respID,
+          ubicacionID: ubiID,
         }),
         headers: {
           "Content-type": "application/json; charset=UTF-8",
@@ -533,30 +575,51 @@ const saveElement = async () => {
       editedItem.value.noSerie = json.noSerie;
       editedItem.value.noInv = json.noInv;
       editedItem.value.desc = json.desc;
-      editedItem.value.responsable = json.responsable;
-      editedItem.value.ubicacion = json.ubicacion;
+      editedItem.value.responsableID = json.responsableID;
+      editedItem.value.responsable = responsablesList.value[json.responsableID-1].nombre;
+      editedItem.value.ubicacionID = json.ubicacionID;
+      editedItem.value.ubicacion = ubicacionesList.value[json.ubicacionID-1].desc;
 
-      console.log(urlTiposDeActivos);
+      //Cambiando relación de etiquetas del activo
+      let auxTag = [];
 
-      response = await fetch(urlTiposDeActivos, {
-        method: "POST",
-        body: JSON.stringify({
-          activo: editedItem.value.id,
-          etiqueta: editedItem.value.etiquetaID,
-        }),
-        headers: {
-          "Content-type": "application/json; charset=UTF-8",
-        },
-      });
-
-      json = await response.json();
-      editedItem.value.id = json.activo;
-      editedItem.value.etiquetaID = json.etiqueta;
+      for (const tagName of editedItem.value.etiqueta) {
+      const tagNo = await etiquetasList.value.find(
+          (etiqueta) => etiqueta.etiquetaName === tagName
+        );
+      auxTag.push(tagNo.id);
+      }
       
-      filteredactivos.value.push({ ...editedItem.value });
+      // Para todas las etiquetas seleccionadas
+      editedItem.value.etiquetaID = [];
+      editedItem.value.etiqueta = [];
+      
+      for (const tagNo of auxTag) {        
+        response = await fetch(urlTiposDeActivos, { // Se agregan las nuevas relaciones del activo con todas las etiquetas
+          method: "POST",
+          body: JSON.stringify({
+            activo: editedItem.value.id,
+            etiqueta: tagNo,
+          }),
+          headers: {
+            "Content-type": "application/json; charset=UTF-8",
+          },
+        });
 
+        json = await response.json();
+        editedItem.value.id = json.activo;
+        editedItem.value.etiquetaID.push(json.etiqueta);
+        editedItem.value.etiqueta.push(etiquetasList.value[json.etiqueta - 1].etiquetaName);
+      }
+
+      // Convertir array de etiquetas a cadena separada por comas y espacios
+      editedItem.value.etiquetaSTR = editedItem.value.etiqueta.join(", ");
+      
+      //Añadir elemento a la lista a mostrar
+      activos.value.push({ ...editedItem.value });
       close();
-    } catch (error) {
+    }
+    catch (error) {
       console.error("Error saving new element:", error);
     }
   }
@@ -574,8 +637,8 @@ getData();
 }
 
 .editElement-Card {
-  width: 90vw;
-  height: 65vh;
+  min-width: 90vw;
+  min-height: 65vh;
   transition: width 0.3s ease, height 0.3s ease;
 }
 </style>

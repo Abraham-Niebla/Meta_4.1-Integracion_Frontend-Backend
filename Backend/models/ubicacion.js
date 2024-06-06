@@ -15,7 +15,7 @@ module.exports = (sequelize, DataTypes) => {
     }
   }
   Ubicacion.init({
-    desc: {
+    ubicacion: {
       type: DataTypes.STRING, //Tipo de dato
       allowNull: true, //Poder dejarlo vacio
       unique: false //No se podrán repetir valores

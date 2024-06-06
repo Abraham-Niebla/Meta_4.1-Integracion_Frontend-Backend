@@ -9,7 +9,7 @@ module.exports = {
         primaryKey: true, //Este atributo se define como la llave primaria 
         type: Sequelize.INTEGER
       },
-      desc: {
+      ubicacion: {
         type: Sequelize.STRING, //Tipo de dato
         allowNull: true, //Poder dejarlo vacio
         unique: false //No se podrán repetir valores
